@@ -333,11 +333,72 @@ class Orcid():
                 work_details.append(work_detail)
 
         return (work_details,data)
-    
+
+    def works_full_metadata(self, limit=10):
+        """
+        Summary of research works with full metadata with limit on number of documents.
+
+        Parameters:
+        - limit (int): Maximum number of documents to retrieve.
+
+        Returns:
+        - list: List of dictionaries containing work details.
+        """
+        work_details, _ = self.works()
+
+        # Determine the number of documents to retrieve
+        num_documents = min(len(work_details), limit)
+
+        # Take the first 'num_documents' from the list of works
+        limited_work_details = work_details[:num_documents]
+
+        batch_size = 100
+
+        for i in range(0, len(limited_work_details), batch_size):
+            batch = limited_work_details[i : i + batch_size]
+
+            put_codes = ",".join([str(work["put_code"]) for work in batch])
+
+            batched_works = self.__read_section(f"works/{put_codes}")
+
+            bulk = batched_works.get("bulk", [])
+
+            for item in bulk:
+                work = item.get("work", {})
+
+                paper_abstract = self.__get_value_from_keys(work, ["short-description"])
+
+                contributors = (
+                    self.__get_value_from_keys(work, ["contributors", "contributor"]) or []
+                )
+
+                authors = []
+
+                for contributor in contributors:
+                    author = contributor.get("credit-name", {}).get("value")
+                    if author:
+                        authors.append(author)
+
+                authors_str = "; ".join(authors)
+
+                work_detail = next(
+                    (
+                        work_detail
+                        for work_detail in batch
+                        if work_detail["put_code"] == work["put-code"]
+                    ),
+                    None,
+                )
+
+                if work_detail:
+                    work_detail["authors"] = authors_str
+                    work_detail["paper_abstract"] = paper_abstract
+
+        return limited_work_details
+
     def research_resources (self):
         '''
-        Summary of research resources 
-        return  :
+        Summary of research resources return  :
         '''
         return self.__read_section("research-resources") 
     
