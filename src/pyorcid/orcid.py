@@ -319,15 +319,17 @@ class Orcid():
                 organization    = self.__get_value_from_keys(work_summary,["organization","name"])
                 organization_address = self.__org_string_from_obj(self.__get_value_from_keys(work_summary, ["organization", "address"]))
                 url             = self.__get_value_from_keys(work_summary,["url","value"])
+                put_code        = self.__get_value_from_keys(work_summary, ['put-code'])
 
                 work_detail = {
-                    'title': title,
-                    'type': work_type,
-                    'publication-date': publication_date,
-                    'journal title': journal_title,
-                    'organization': organization,
-                    'organization-address': organization_address,
-                    'url': url,
+                    "title": title,
+                    "type": work_type,
+                    "publication-date": publication_date,
+                    "journal title": journal_title,
+                    "organization": organization,
+                    "organization-address": organization_address,
+                    "url": url,
+                    "put_code": put_code,
                 }
 
                 work_details.append(work_detail)
@@ -349,52 +351,37 @@ class Orcid():
         # Determine the number of documents to retrieve
         num_documents = min(len(work_details), limit)
 
-        # Take the first 'num_documents' from the list of works
-        limited_work_details = work_details[:num_documents]
+        # Use generator to avoid storing all work details in memory at once
+        limited_work_details = (work_details[i] for i in range(num_documents))
 
         batch_size = 100
 
-        for i in range(0, len(limited_work_details), batch_size):
-            batch = limited_work_details[i : i + batch_size]
+        result = []
 
-            put_codes = ",".join([str(work["put_code"]) for work in batch])
+        batch = []
+        for work in limited_work_details:
+            batch.append(work)
+            if len(batch) == batch_size:
+                put_codes = ",".join(str(work["put_code"]) for work in batch)
+                batched_works = self.__read_section(f"works/{put_codes}")
+                result.extend(
+                    item["work"]
+                    for item in batched_works.get("bulk", [])
+                    if item.get("work") is not None
+                )
+                batch = []
 
+        # Process any remaining works in the final batch
+        if batch:
+            put_codes = ",".join(str(work["put_code"]) for work in batch)
             batched_works = self.__read_section(f"works/{put_codes}")
+            result.extend(
+                item["work"]
+                for item in batched_works.get("bulk", [])
+                if item.get("work") is not None
+            )
 
-            bulk = batched_works.get("bulk", [])
-
-            for item in bulk:
-                work = item.get("work", {})
-
-                paper_abstract = self.__get_value_from_keys(work, ["short-description"])
-
-                contributors = (
-                    self.__get_value_from_keys(work, ["contributors", "contributor"]) or []
-                )
-
-                authors = []
-
-                for contributor in contributors:
-                    author = contributor.get("credit-name", {}).get("value")
-                    if author:
-                        authors.append(author)
-
-                authors_str = "; ".join(authors)
-
-                work_detail = next(
-                    (
-                        work_detail
-                        for work_detail in batch
-                        if work_detail["put_code"] == work["put-code"]
-                    ),
-                    None,
-                )
-
-                if work_detail:
-                    work_detail["authors"] = authors_str
-                    work_detail["paper_abstract"] = paper_abstract
-
-        return limited_work_details
+        return result
 
     def research_resources (self):
         '''
