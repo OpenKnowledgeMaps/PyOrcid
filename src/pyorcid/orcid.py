@@ -319,25 +319,73 @@ class Orcid():
                 organization    = self.__get_value_from_keys(work_summary,["organization","name"])
                 organization_address = self.__org_string_from_obj(self.__get_value_from_keys(work_summary, ["organization", "address"]))
                 url             = self.__get_value_from_keys(work_summary,["url","value"])
+                put_code        = self.__get_value_from_keys(work_summary, ['put-code'])
 
                 work_detail = {
-                    'title': title,
-                    'type': work_type,
-                    'publication-date': publication_date,
-                    'journal title': journal_title,
-                    'organization': organization,
-                    'organization-address': organization_address,
-                    'url': url,
+                    "title": title,
+                    "type": work_type,
+                    "publication-date": publication_date,
+                    "journal title": journal_title,
+                    "organization": organization,
+                    "organization-address": organization_address,
+                    "url": url,
+                    "put_code": put_code,
                 }
 
                 work_details.append(work_detail)
 
         return (work_details,data)
-    
+
+    def works_full_metadata(self, limit=10):
+        """
+        Summary of research works with full metadata with limit on number of documents.
+
+        Parameters:
+        - limit (int): Maximum number of documents to retrieve.
+
+        Returns:
+        - list: List of dictionaries containing work details.
+        """
+        work_details, _ = self.works()
+
+        # Determine the number of documents to retrieve
+        num_documents = min(len(work_details), limit)
+
+        # Use generator to avoid storing all work details in memory at once
+        limited_work_details = (work_details[i] for i in range(num_documents))
+
+        batch_size = 100
+
+        result = []
+
+        batch = []
+        for work in limited_work_details:
+            batch.append(work)
+            if len(batch) == batch_size:
+                put_codes = ",".join(str(work["put_code"]) for work in batch)
+                batched_works = self.__read_section(f"works/{put_codes}")
+                result.extend(
+                    item["work"]
+                    for item in batched_works.get("bulk", [])
+                    if item.get("work") is not None
+                )
+                batch = []
+
+        # Process any remaining works in the final batch
+        if batch:
+            put_codes = ",".join(str(work["put_code"]) for work in batch)
+            batched_works = self.__read_section(f"works/{put_codes}")
+            result.extend(
+                item["work"]
+                for item in batched_works.get("bulk", [])
+                if item.get("work") is not None
+            )
+
+        return result
+
     def research_resources (self):
         '''
-        Summary of research resources 
-        return  :
+        Summary of research resources return  :
         '''
         return self.__read_section("research-resources") 
     
