@@ -320,6 +320,7 @@ class Orcid():
                 organization_address = self.__org_string_from_obj(self.__get_value_from_keys(work_summary, ["organization", "address"]))
                 url             = self.__get_value_from_keys(work_summary,["url","value"])
                 put_code        = self.__get_value_from_keys(work_summary, ['put-code'])
+                display_index   = self.__get_value_from_keys(work_summary, ['display-index'])
 
                 work_detail = {
                     "title": title,
@@ -330,9 +331,51 @@ class Orcid():
                     "organization-address": organization_address,
                     "url": url,
                     "put_code": put_code,
+                    "display_index": display_index,
                 }
 
                 work_details.append(work_detail)
+
+        return (work_details,data)
+    
+    def deduplicated_works(self):
+        '''
+        Summary of research works
+        return  : a tuple containing the Work details and the whole info tree related to work from orcid
+        '''
+        data =  self.__read_section("works") 
+        work_details = []
+
+        group = data.get('group', [])
+
+        for work_summary in group:
+            work_summaries = work_summary.get('work-summary', [])
+
+            work_summary = max(work_summaries, key=lambda x: x["display-index"])
+
+            title           = self.__get_value_from_keys(work_summary,["title","title","value"])
+            work_type       = self.__get_value_from_keys(work_summary,["type"])
+            publication_date= self.get_formatted_date(work_summary.get('publication-date', {}))
+            journal_title   = self.__get_value_from_keys(work_summary,["journal-title","value"])
+            organization    = self.__get_value_from_keys(work_summary,["organization","name"])
+            organization_address = self.__org_string_from_obj(self.__get_value_from_keys(work_summary, ["organization", "address"]))
+            url             = self.__get_value_from_keys(work_summary,["url","value"])
+            put_code        = self.__get_value_from_keys(work_summary, ['put-code'])
+            display_index   = self.__get_value_from_keys(work_summary, ['display-index'])
+
+            work_detail = {
+                "title": title,
+                "type": work_type,
+                "publication-date": publication_date,
+                "journal title": journal_title,
+                "organization": organization,
+                "organization-address": organization_address,
+                "url": url,
+                "put_code": put_code,
+                "display_index": display_index,
+            }
+                
+            work_details.append(work_detail)
 
         return (work_details,data)
 
@@ -346,7 +389,7 @@ class Orcid():
         Returns:
         - list: List of dictionaries containing work details.
         """
-        work_details, _ = self.works()
+        work_details, _ = self.deduplicated_works()
 
         # Determine the number of documents to retrieve
         num_documents = min(len(work_details), limit)
