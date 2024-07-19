@@ -322,6 +322,7 @@ class Orcid():
                 put_code        = self.__get_value_from_keys(work_summary, ['put-code'])
                 display_index   = self.__get_value_from_keys(work_summary, ['display-index'])
 
+
                 work_detail = {
                     "title": title,
                     "type": work_type,
@@ -390,6 +391,7 @@ class Orcid():
         - list: List of dictionaries containing work details.
         """
         work_details, _ = self.deduplicated_works()
+
 
         # Determine the number of documents to retrieve
         num_documents = min(len(work_details), limit)
