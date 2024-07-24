@@ -1,13 +1,13 @@
 import requests
-from dotenv import load_dotenv
-import os
 from datetime import datetime
+from .errors import Unauthorized, BadRequest, NotFound, OrcidServerError
 
 class Orcid():
     '''
     This is a wrapper class for ORCID API
     '''
-    def __init__(self,orcid_id, orcid_access_token = " ", state="public", sandbox=False) -> None:
+
+    def __init__(self, orcid_id, orcid_access_token=" ", state="public", sandbox=False) -> None:
         '''
         Initialize orcid instance
         orcid_id : Orcid ID of the user
@@ -19,92 +19,66 @@ class Orcid():
         self._orcid_access_token = orcid_access_token
         self._state = state
         self._sandbox = sandbox
-        #For testing purposes (pytesting on github workflow)
-        if orcid_access_token!=" ":
-            try:
-                self.__test_is_access_token_valid()
-            except:
-                if not self.__is_access_token_valid():
-                    raise ValueError(f"Invalid access token! Please make sure the user with ORCID_ID:{orcid_id} has given access.")
 
-        return
+        self._api_url = self.__get_api_url()
 
-    def __is_access_token_valid(self):
-        '''
-        Checks if the current access token is valid
-        '''
-        access_token = self._orcid_access_token
-
-        if access_token=="":
-            raise ValueError("Empty value for access token! Please make sure you are authenticated by ORCID as developer.")
-        # Make a test request to the API using the token
-        headers = {
-            'Authorization': f'Bearer {access_token}',
+        # Initialize a session with the ORCID API
+        self._session = requests.Session()
+        self._session.headers.update({
+            'Authorization': f'Bearer {orcid_access_token}',
             'Content-Type': 'application/json'
-        }
+        })
 
+    def __get_api_url(self):
+        """
+        Get the API URL based on the state and sandbox settings
+        return : API URL
+        """
         api_url = ""
 
         if self._state == "public":
             # Specify the ORCID record endpoint for the desired ORCID iD
-            api_url = f'https://pub.orcid.org/v3.0/{self._orcid_id}'
-            if(self._sandbox):
-                api_url = f'https://pub.sandbox.orcid.org/v3.0/{self._orcid_id}'  #for testing
+            api_url = f"https://pub.orcid.org/v3.0/{self._orcid_id}"
+            if self._sandbox:
+                api_url = f"https://pub.sandbox.orcid.org/v3.0/{self._orcid_id}"  # for testing
 
         elif self._state == "member":
             api_url = f'https://api.orcid.org/v3.0/{self._orcid_id}'
-            if(self._sandbox):
-                api_url = f'https://api.sandbox.orcid.org/v3.0/{self._orcid_id}'  #for testing
+            if self._sandbox:
+                api_url = f"https://api.sandbox.orcid.org/v3.0/{self._orcid_id}"  # for testing
 
-        response = requests.get(api_url, headers=headers)
+        return api_url
 
-        if response.status_code == 404:
-            # The request was successful, and the token is likely valid
-            return False
-        else:
-            # The request failed, indicating that the token may have expired or is invalid
-            return True
-    
-        
     def __read_section(self,section="record"):
         '''
         Reads the section of a Orcid member Profile
         return  : a dictionary of summary view of the section of ORCID data 
         '''
         
-        access_token = self._orcid_access_token
-
         # Set the headers with the access token for authentication
-        headers = {
-            'Authorization': f'Bearer {access_token}',
-            'Content-Type': 'application/json'
-        }
-        api_url = ""
+        api_url = f"{self.__get_api_url()}/{section}"
 
-        if self._state == "public":
-            # Specify the ORCID record endpoint for the desired ORCID iD
-            api_url = f'https://pub.orcid.org/v3.0/{self._orcid_id}/{section}'
-            if(self._sandbox):
-                api_url = f'https://pub.sandbox.orcid.org/v3.0/{self._orcid_id}/{section}'  #for testing
-
-        elif self._state == "member":
-            api_url = f'https://api.orcid.org/v3.0/{self._orcid_id}/{section}'
-            if(self._sandbox):
-                api_url = f'https://api.sandbox.orcid.org/v3.0/{self._orcid_id}/{section}'  #for testing
-
-
-        # Make a GET request to retrieve the ORCID record
-        response = requests.get(api_url, headers=headers)
+        response = self._session.get(api_url)
 
         # The request was successful
         data = response.json()
+        success_status_codes = [200, 201, 202, 204]
         # Check the response status code
-        if response.status_code == 200 or data is not None:
+        if response.status_code in success_status_codes:
             return data
+        elif response.status_code == 400:
+            raise BadRequest(response)
+        elif response.status_code == 401:
+            raise Unauthorized(response)
+        elif response.status_code == 404:
+            raise NotFound(response)
+        elif response.status_code >= 400 and response.status_code < 500:
+            # Handle the case where the request failed with unexpected status code
+            raise BadRequest(response)
+        elif response.status_code >= 500:
+            raise OrcidServerError(response)
         else:
-            # Handle the case where the request failed
-            print("Failed to retrieve ORCID data. Status code:", response.status_code)
-            return None
+            raise Exception(data)
         
     def __timestamp_to_iso_date(self, timestamp):
         '''
@@ -703,38 +677,6 @@ class Orcid():
 
 
     ## THESE FUNCTIONS ARE FOR TESTING PURPOSES ##
-    def __test_is_access_token_valid(self):
-        '''
-        FOR TESTING PURPOSES ONLY
-        Checks if the current access token is valid
-        '''
-        # Access the environment variable from github secrets
-        access_token = os.environ["ORCID_ACCESS_TOKEN"]
-        if access_token=="":
-            raise ValueError("Empty value for access token! Please make sure you are authenticated by ORCID as developer.")
-        # Make a test request to the API using the token
-        headers = {
-            'Authorization': f'Bearer {access_token}',
-            'Content-Type': 'application/json'
-        }
-
-        api_url = ""
-
-        if self._state == "public":
-            # Specify the ORCID record endpoint for the desired ORCID iD
-            api_url = f'https://pub.sandbox.orcid.org/v3.0/{self._orcid_id}'
-            
-        elif self._state == "member":
-            api_url = f'https://api.sandbox.orcid.org/v3.0/{self._orcid_id}'
-
-        response = requests.get(api_url, headers=headers)
-        if response.status_code == 404:
-            # The request was successful, and the token is likely valid
-            return False
-        else:
-            # The request failed, indicating that the token may have expired or is invalid
-            return True
-        
     def __test_read_section(self,section="record"):
         '''
         FOR TESTING PURPOSES ONLY
@@ -742,25 +684,11 @@ class Orcid():
         return  : a dictionary of summary view of the section of ORCID data 
         '''
 
-        access_token = os.environ["ORCID_ACCESS_TOKEN"]
 
-        # Set the headers with the access token for authentication
-        headers = {
-            'Authorization': f'Bearer {access_token}',
-            'Content-Type': 'application/json'
-        }
-
-        api_url = ""
-
-        if self._state == "public":
-            # Specify the ORCID record endpoint for the desired ORCID iD
-            api_url = f'https://pub.sandbox.orcid.org/v3.0/{self._orcid_id}/{section}'
-            
-        elif self._state == "member":
-            api_url = f'https://api.sandbox.orcid.org/v3.0/{self._orcid_id}/{section}'
+        api_url = f"{self.__get_api_url()}/{section}"
 
         # Make a GET request to retrieve the ORCID record
-        response = requests.get(api_url, headers=headers)
+        response = self._session.get(api_url)
 
         # The request was successful
         data = response.json()
