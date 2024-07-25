@@ -354,7 +354,7 @@ class Orcid():
 
         return (work_details,data)
 
-    def works_full_metadata(self, limit=10):
+    def works_full_metadata(self, limit=10, deduplicate = True):
         """
         Summary of research works with full metadata with limit on number of documents.
 
@@ -364,8 +364,7 @@ class Orcid():
         Returns:
         - list: List of dictionaries containing work details.
         """
-        work_details, _ = self.deduplicated_works()
-
+        work_details, _ = self.deduplicated_works() if deduplicate else self.works()
 
         # Determine the number of documents to retrieve
         num_documents = min(len(work_details), limit)
