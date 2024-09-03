@@ -354,7 +354,7 @@ class Orcid():
 
         return (work_details,data)
 
-    def works_full_metadata(self, limit=10, deduplicate = True):
+    def works_full_metadata(self, deduplicate = True):
         """
         Summary of research works with full metadata with limit on number of documents.
 
@@ -366,18 +366,12 @@ class Orcid():
         """
         work_details, _ = self.deduplicated_works() if deduplicate else self.works()
 
-        # Determine the number of documents to retrieve
-        num_documents = min(len(work_details), limit)
-
-        # Use generator to avoid storing all work details in memory at once
-        limited_work_details = (work_details[i] for i in range(num_documents))
-
         batch_size = 100
 
         result = []
 
         batch = []
-        for work in limited_work_details:
+        for work in work_details:
             batch.append(work)
             if len(batch) == batch_size:
                 put_codes = ",".join(str(work["put_code"]) for work in batch)
