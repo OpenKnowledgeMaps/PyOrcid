@@ -265,6 +265,49 @@ class Orcid():
 
         return (funding_details,data)
     
+    def funds_enriched(self):
+        '''
+        Summary of funding activities
+        return  : a tuple containing the Funding details and the whole info tree related to funding from orcid
+        '''
+        funding_details = []
+
+        data = self.__read_section("fundings") 
+        group = data.get('group', [])
+
+        for funding_summary in group:
+            funding_summaries = funding_summary.get('funding-summary', [])
+
+            for fund_summary in funding_summaries:
+                title       = self.__get_value_from_keys(fund_summary,["title","title","value"])
+                fund_type   = self.__get_value_from_keys(fund_summary,["type"])
+                start_date  = self.get_formatted_date(fund_summary.get('start-date', {}))
+                end_date    = self.get_formatted_date(fund_summary.get('end-date', {}))
+                organization= self.__get_value_from_keys(fund_summary,["organization","name"])
+                organization_address = self.__org_string_from_obj(self.__get_value_from_keys(fund_summary, ["organization", "address"]))
+                url         = self.__get_value_from_keys(fund_summary,["url","value"])
+                put_code    = self.__get_value_from_keys(fund_summary, ['put-code'])
+
+                enriched_funding = self.__read_section(f"funding/{put_code}")
+
+                funding_detail = {
+                    'title': title,
+                    'type': fund_type,
+                    'start-date': start_date,
+                    'end-date': end_date,
+                    'organization': organization,
+                    'organization-address': organization_address,
+                    'url': url,
+                    'amount': {
+                        'value': self.__get_value_from_keys(enriched_funding, ['amount', 'value']),
+                        'currency': self.__get_value_from_keys(enriched_funding, ['amount', 'currency-code']),
+                    }
+                }
+
+                funding_details.append(funding_detail)
+
+        return (funding_details,data)
+    
     def peer_reviews(self):
         '''
         Summary of peer review activities
@@ -394,7 +437,7 @@ class Orcid():
             )
 
         return result
-
+    
     def research_resources (self):
         '''
         Summary of research resources return  :
