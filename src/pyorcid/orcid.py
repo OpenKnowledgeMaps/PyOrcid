@@ -26,7 +26,8 @@ class Orcid():
         self._session = requests.Session()
         self._session.headers.update({
             'Authorization': f'Bearer {orcid_access_token}',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'charset': 'UTF-8'
         })
 
     def __get_api_url(self):
