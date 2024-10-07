@@ -115,10 +115,10 @@ class Orcid():
         '''
         try:
             # Check if string contains any non-ASCII characters
-            s.encode('ascii')
+            s.encode('utf-8')
         except UnicodeEncodeError:
             # String contains non-ASCII characters, remove them
-            s = s.encode('ascii', 'ignore').decode('ascii')
+            s = s.encode("utf-8", "ignore").decode("utf-8")
         return s
 
     def record(self):
