@@ -1,5 +1,7 @@
 import requests
 from datetime import datetime
+
+from .types import ResearcherUrlsResponse
 from .errors import Unauthorized, BadRequest, NotFound, OrcidServerError
 
 class Orcid():
@@ -160,7 +162,7 @@ class Orcid():
         return  : A tuple of list of emails and whole info tree related to email from orcid
         '''
         data =  self.__read_section("email") 
-        emails = [email['email'] for email in self.__get_value_from_keys(data,["person","emails","email"])]
+        emails = [email['email'] for email in self.__get_value_from_keys(data,["email"])]
         return emails, data
     
     def external_identifiers(self):
@@ -194,7 +196,7 @@ class Orcid():
         '''
         return self.__read_section("personal-details") 
     
-    def researcher_urls(self):
+    def researcher_urls(self) -> ResearcherUrlsResponse:
         '''
         Links to the researcher‚s personal or profile pages
         return  :
