@@ -2,7 +2,7 @@ import requests
 from datetime import datetime
 
 from .types import ResearcherUrlsResponse
-from .errors import Unauthorized, BadRequest, NotFound, OrcidServerError
+from .errors import Unauthorized, BadRequest, NotFound, InternalServerError
 
 class Orcid():
     '''
@@ -79,11 +79,11 @@ class Orcid():
             # Handle the case where the request failed with unexpected status code
             raise BadRequest(response)
         elif response.status_code >= 500:
-            raise OrcidServerError(response)
+            raise InternalServerError(response)
         else:
             raise Exception(data)
         
-    def __timestamp_to_iso_date(self, timestamp):
+    def __timestamp_to_iso_date(self, timestamp: float) -> str:
         '''
         Converts a timestamp to an ISO date string
         return : ISO date string
@@ -108,7 +108,7 @@ class Orcid():
         except Exception as e:
             raise ValueError(f"Error: {e}")
         
-    def __deunicode_string(self, s):
+    def __deunicode_string(self, s: str) -> str:
         '''
         Removes non-ASCII characters from a string
         return : a string with only ASCII characters
@@ -467,7 +467,7 @@ class Orcid():
 
         qualifications = self.__extract_details(data, "qualification")
 
-        return (qualifications,data)
+        return (qualifications, data)
     
     def memberships(self):
         '''

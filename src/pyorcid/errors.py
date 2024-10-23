@@ -111,18 +111,10 @@ class TooManyRequests(HTTPException):
     pass
 
 
-class OrcidServerError(HTTPException):
-    """OrcidServerError()
-
-    Exception raised for a 5xx HTTP status code
-    """
-
-    pass
-
 class InternalServerError(HTTPException):
     """InternalServerError()
 
-    Exception raised for a 500 HTTP status code
+    Exception raised for a 5xx HTTP status code
     """
 
     pass

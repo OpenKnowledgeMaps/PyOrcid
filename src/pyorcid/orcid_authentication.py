@@ -1,5 +1,6 @@
 import requests
 from urllib.parse import urlencode
+from .errors import BadRequest
 
 class OrcidAuthentication:
     '''
@@ -68,7 +69,7 @@ class OrcidAuthentication:
         # set_key(".env", "ORCID_ACCESS_TOKEN", access_token)
         return access_token
     
-    def get_public_access_token(self):
+    def get_public_access_token(self) -> str:
         """
         This method gets token for reading public data (/read-public scope) from Orcid.
         Doesnt' require user authentication 
@@ -95,10 +96,8 @@ class OrcidAuthentication:
 
             access_token = response.json().get('access_token')
             return access_token
-
         except requests.exceptions.RequestException as e:
-            print(f"Error during token retrieval: {e}")
-            return None
+            raise BadRequest(e.response)
         
     def save_credentials(self, access_token):
         '''
