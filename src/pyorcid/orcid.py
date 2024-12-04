@@ -233,40 +233,57 @@ class Orcid():
         return (employments,data)
     
     def fundings(self):
-        '''
+        """
         Summary of funding activities
         return  : a tuple containing the Funding details and the whole info tree related to funding from orcid
-        '''
+        """
         funding_details = []
 
-        data = self.__read_section("fundings") 
-        group = data.get('group', [])
+        data = self.__read_section("fundings")
+        group = data.get("group", [])
 
         for funding_summary in group:
-            funding_summaries = funding_summary.get('funding-summary', [])
+            funding_summaries = funding_summary.get("funding-summary", [])
 
-            for fund_summary in funding_summaries:
-                title       = self.__get_value_from_keys(fund_summary,["title","title","value"])
-                fund_type   = self.__get_value_from_keys(fund_summary,["type"])
-                start_date  = self.get_formatted_date(fund_summary.get('start-date', {}))
-                end_date    = self.get_formatted_date(fund_summary.get('end-date', {}))
-                organization= self.__get_value_from_keys(fund_summary,["organization","name"])
-                organization_address = self.__org_string_from_obj(self.__get_value_from_keys(fund_summary, ["organization", "address"]))
-                url         = self.__get_value_from_keys(fund_summary,["url","value"])
+            if not funding_summaries:
+                continue
 
-                funding_detail = {
-                    'title': title,
-                    'type': fund_type,
-                    'start-date': start_date,
-                    'end-date': end_date,
-                    'organization': organization,
-                    'organization-address': organization_address,
-                    'url': url,
-                }
+            # Find the funding-summary with the highest 'display-index'
+            max_funding_summary = max(
+                funding_summaries,
+                key=lambda fs: int(
+                    fs.get("display-index", "0")
+                ),  # Convert 'display-index' to an integer for comparison
+            )
 
-                funding_details.append(funding_detail)
+            # Extract details from the selected funding summary
+            title = self.__get_value_from_keys(
+                max_funding_summary, ["title", "title", "value"]
+            )
+            fund_type = self.__get_value_from_keys(max_funding_summary, ["type"])
+            start_date = self.get_formatted_date(max_funding_summary.get("start-date", {}))
+            end_date = self.get_formatted_date(max_funding_summary.get("end-date", {}))
+            organization = self.__get_value_from_keys(
+                max_funding_summary, ["organization", "name"]
+            )
+            organization_address = self.__org_string_from_obj(
+                self.__get_value_from_keys(max_funding_summary, ["organization", "address"])
+            )
+            url = self.__get_value_from_keys(max_funding_summary, ["url", "value"])
 
-        return (funding_details,data)
+            funding_detail = {
+                "title": title,
+                "type": fund_type,
+                "start-date": start_date,
+                "end-date": end_date,
+                "organization": organization,
+                "organization-address": organization_address,
+                "url": url,
+            }
+
+            funding_details.append(funding_detail)
+
+        return (funding_details, data)
     
     def funds_enriched(self):
         '''
