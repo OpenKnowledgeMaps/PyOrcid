@@ -298,33 +298,46 @@ class Orcid():
         for funding_summary in group:
             funding_summaries = funding_summary.get('funding-summary', [])
 
-            for fund_summary in funding_summaries:
-                title       = self.__get_value_from_keys(fund_summary,["title","title","value"])
-                fund_type   = self.__get_value_from_keys(fund_summary,["type"])
-                start_date  = self.get_formatted_date(fund_summary.get('start-date', {}))
-                end_date    = self.get_formatted_date(fund_summary.get('end-date', {}))
-                organization= self.__get_value_from_keys(fund_summary,["organization","name"])
-                organization_address = self.__org_string_from_obj(self.__get_value_from_keys(fund_summary, ["organization", "address"]))
-                url         = self.__get_value_from_keys(fund_summary,["url","value"])
-                put_code    = self.__get_value_from_keys(fund_summary, ['put-code'])
+            funding_summaries = funding_summary.get("funding-summary", [])
 
-                enriched_funding = self.__read_section(f"funding/{put_code}")
+            if not funding_summaries:
+                continue
 
-                funding_detail = {
-                    'title': title,
-                    'type': fund_type,
-                    'start-date': start_date,
-                    'end-date': end_date,
-                    'organization': organization,
-                    'organization-address': organization_address,
-                    'url': url,
-                    'amount': {
-                        'value': self.__get_value_from_keys(enriched_funding, ['amount', 'value']),
-                        'currency': self.__get_value_from_keys(enriched_funding, ['amount', 'currency-code']),
-                    }
+            # Find the funding-summary with the highest 'display-index'
+            max_funding_summary = max(
+                funding_summaries,
+                key=lambda fs: int(
+                    fs.get("display-index", "0")
+                ),  # Convert 'display-index' to an integer for comparison
+            )
+
+
+            title       = self.__get_value_from_keys(max_funding_summary,["title","title","value"])
+            fund_type   = self.__get_value_from_keys(max_funding_summary,["type"])
+            start_date  = self.get_formatted_date(max_funding_summary.get('start-date', {}))
+            end_date    = self.get_formatted_date(max_funding_summary.get('end-date', {}))
+            organization= self.__get_value_from_keys(max_funding_summary,["organization","name"])
+            organization_address = self.__org_string_from_obj(self.__get_value_from_keys(max_funding_summary, ["organization", "address"]))
+            url         = self.__get_value_from_keys(max_funding_summary,["url","value"])
+            put_code    = self.__get_value_from_keys(max_funding_summary, ['put-code'])
+
+            enriched_funding = self.__read_section(f"funding/{put_code}")
+
+            funding_detail = {
+                'title': title,
+                'type': fund_type,
+                'start-date': start_date,
+                'end-date': end_date,
+                'organization': organization,
+                'organization-address': organization_address,
+                'url': url,
+                'amount': {
+                    'value': self.__get_value_from_keys(enriched_funding, ['amount', 'value']),
+                    'currency': self.__get_value_from_keys(enriched_funding, ['amount', 'currency-code']),
                 }
+            }
 
-                funding_details.append(funding_detail)
+            funding_details.append(funding_detail)
 
         return (funding_details,data)
     
@@ -597,30 +610,34 @@ class Orcid():
         
         for group in affiliation_group:
             summaries = group.get('summaries', [])
-            
-            for summary in summaries:
-                key_summary = summary.get(f'{key}-summary', {})
-                department  = self.__get_value_from_keys(key_summary,["department-name"])
-                role        = self.__get_value_from_keys(key_summary,["role-title"])
-                start_date  = self.get_formatted_date(key_summary.get('start-date', {}))
-                end_date    = self.get_formatted_date(key_summary.get('end-date', {}))
-                organization = self.__get_value_from_keys(key_summary,["organization","name"])
-                
-                # Extract the organization address components into a string
-                organization_address = self.__org_string_from_obj(self.__get_value_from_keys(key_summary, ["organization", "address"]))
 
-                url  = self.__get_value_from_keys(key_summary,["url","value"])
-                detail = {
-                    'Department': department,
-                    'Role': role,
-                    'start-date': start_date,
-                    'end-date': end_date,
-                    'organization': organization,
-                    'organization-address': organization_address,
-                    'url': url,
-                }
-                
-                details.append(detail)
+            if not summaries:
+                continue
+            
+            summary = summary[0]
+            
+            key_summary = summary.get(f'{key}-summary', {})
+            department  = self.__get_value_from_keys(key_summary,["department-name"])
+            role        = self.__get_value_from_keys(key_summary,["role-title"])
+            start_date  = self.get_formatted_date(key_summary.get('start-date', {}))
+            end_date    = self.get_formatted_date(key_summary.get('end-date', {}))
+            organization = self.__get_value_from_keys(key_summary,["organization","name"])
+            
+            # Extract the organization address components into a string
+            organization_address = self.__org_string_from_obj(self.__get_value_from_keys(key_summary, ["organization", "address"]))
+
+            url  = self.__get_value_from_keys(key_summary,["url","value"])
+            detail = {
+                'Department': department,
+                'Role': role,
+                'start-date': start_date,
+                'end-date': end_date,
+                'organization': organization,
+                'organization-address': organization_address,
+                'url': url,
+            }
+            
+            details.append(detail)
         
         return details
     
