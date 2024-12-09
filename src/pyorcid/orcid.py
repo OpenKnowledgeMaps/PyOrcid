@@ -614,7 +614,7 @@ class Orcid():
             if not summaries:
                 continue
             
-            summary = summary[0]
+            summary = summaries[0]
             
             key_summary = summary.get(f'{key}-summary', {})
             department  = self.__get_value_from_keys(key_summary,["department-name"])
