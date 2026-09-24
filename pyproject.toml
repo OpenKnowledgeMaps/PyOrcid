@@ -20,7 +20,7 @@ keywords = ["orcid", "orcid-api", "pyorcid"]
 [tool.poetry.dependencies]
 python = "^3.8"
 python-dotenv = "*"
-urllib3 = "^1.26.7"
+urllib3 = ">=1.26.7,<3"
 requests = "^2.26.0"
 xmltojson = "*"
 
